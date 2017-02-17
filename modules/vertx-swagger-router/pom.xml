@@ -5,6 +5,7 @@
     <groupId>io.vertx</groupId>
     <artifactId>vertx-swagger-parent</artifactId>
     <version>1.0.0-SNAPSHOT</version>
+    <relativePath>../..</relativePath>
   </parent>
 
   <artifactId>vertx-swagger-router</artifactId>
