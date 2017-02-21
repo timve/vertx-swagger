@@ -1,7 +1,12 @@
 language: java
 cache:
- directories:
-   - $HOME/.m2
+  directories:
+  - "$HOME/.m2"
 jdk:
-  - oraclejdk8
-
+- oraclejdk8
+deploy:
+  provider: bintray
+  key:
+    secure: owj0UrbLeG2AH3LtZg4UNO6d+W43U9k4tlB5KUkior7151O6frMz/Ia1jfQ4d1Bc/BHmFlnmCqYzAiUT3zeazgx+4anXn24SH95SPoQGw3COpiDywsdnpsIUYt3h8MA/XTydtqERpzMbQGkjVqu73uKn94KzOdyuDevIsY1fxD8JYo9Vv0viJeYCZlmw6vqs5W5g+sFJdieSopYQJ4Vn9nXSXD3gIpJteQ0ThTKc0/eJrZXEZ4Wp9IsDlYyGvrtzqvSNzuockIF0J9KnoADRuU4OIjUXcKgh6xLWAo+VJ83i6/NtrBw7ZSIHOmdwjRQkBWEKdRcgaeJgcXFbpi1akTdwmn3FavDobFwQbBDlh1BQLtUldLMdxGcTP8lHzVGfMplptcMW4gX5lN5qDYadmM1V2F5iMTaEHKcTTKNCbicggWhLCOHEeuXQOUNs12gvMo0QfBXaJskRFlEXGxK+NyqpSdoZ7hOaUewHABMPZFBrGQSHqwPf+/ghK2G1YRrJwY4gaWV5Y5Xcpsn93GmDdk88mv7k5eNhknEaqU9810dUzDjuqsRjQ9hXmbvvIPUUE/hJzufYFcpfqnM2Wyt9kcKFgeEAJi7uTH+/lOGpI2hCgPEqFOQcVZ/ngu0TKtE+s8jLKiKXyQd81a9oANKrWPT/8obmqtytEYBC+APvR6M=
+  user: "phiz71"
+  dry-run: true
