@@ -11,3 +11,4 @@ deploy:
   user: "phiz71"
   dry-run: true
   on: develop
+  file: descriptor.json
