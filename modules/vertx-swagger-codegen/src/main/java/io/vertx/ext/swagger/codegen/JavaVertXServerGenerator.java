@@ -4,6 +4,7 @@ import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.ResourceBundle;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +33,7 @@ public class JavaVertXServerGenerator extends JavaClientCodegen implements Codeg
 
     public static final String ROOT_PACKAGE = "rootPackage";
     public static final String VERTICLE_PACKAGE = "verticlePackage";
+    public static final String VERTX_SWAGGER_ROUTER_VERSION = "vertxSwaggerRouterVersion";
 
     protected String verticlePackage = "";
 
@@ -88,6 +90,8 @@ public class JavaVertXServerGenerator extends JavaClientCodegen implements Codeg
         artifactId = "swagger-java-vertx-server";
         artifactVersion = apiVersion;
 
+        String vertxSwaggerRouterVersion = ResourceBundle.getBundle("vertx-swagger-router").getString("vertx-swagger-router.version");
+        additionalProperties.put(VERTX_SWAGGER_ROUTER_VERSION, vertxSwaggerRouterVersion);
     }
 
     /**
