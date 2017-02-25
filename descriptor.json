@@ -15,7 +15,7 @@
 
     "files":
         [
-        {"includePattern": "/home/travis/.m2/repository/io/vertx/(.*)/(.*)/(.*)", "uploadPattern": "/$1/$3"}
+        {"includePattern": "/home/travis/.m2/repository/io/vertx/(vertx-swagger-.*)/(.*)/(.*)", "uploadPattern": "/$1/$3"}
         ],
     "publish": true
 }
