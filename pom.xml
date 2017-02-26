@@ -29,7 +29,7 @@
   </developers>
 
   <scm>
-    <url>git@github.com:phiz71/vertx-swagger</url>
+    <url>scm:git:git@github.com:phiz71/vertx-swagger.git</url>
     <connection>scm:git:git@github.com:phiz71/vertx-swagger.git</connection>
     <developerConnection>scm:git:git@github.com:phiz71/vertx-swagger.git</developerConnection>
   </scm>
