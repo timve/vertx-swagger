@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
+import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -28,9 +29,9 @@ import io.vertx.core.json.Json;
 import io.vertx.core.json.JsonArray;
 import io.vertx.core.json.JsonObject;
 import io.vertx.ext.swagger.router.model.Category;
+import io.vertx.ext.swagger.router.model.Pet;
 import io.vertx.ext.swagger.router.model.Pet.StatusEnum;
 import io.vertx.ext.swagger.router.model.User;
-import io.vertx.ext.swagger.router.model.Pet;
 import io.vertx.ext.unit.Async;
 import io.vertx.ext.unit.TestContext;
 import io.vertx.ext.unit.junit.VertxUnitRunner;
@@ -55,7 +56,6 @@ public class BuildRouterTest {
         cat = new Pet(1L, new Category(1L, "CAT"), "kitty", new ArrayList<>(), new ArrayList<>(), StatusEnum.AVAILABLE);
         dog = new Pet(2L, new Category(2L, "DOG"), "rex", new ArrayList<>(), new ArrayList<>(), StatusEnum.PENDING);
         bird = new Pet(3L, new Category(3L, "BIRD"), "twetty", new ArrayList<>(), new ArrayList<>(), StatusEnum.SOLD);
-        
 
         // init Router
         FileSystem vertxFileSystem = vertx.fileSystem();
@@ -90,21 +90,12 @@ public class BuildRouterTest {
             String petId = message.body().getString("petId");
             String name = message.body().getString("name");
             String status = message.body().getString("status");
-            message.reply(new JsonObject()
-                    .put("petId_received", petId)
-                    .put("name_received", name)
-                    .put("status_received", status)
-                    .encode()
-                    );
+            message.reply(new JsonObject().put("petId_received", petId).put("name_received", name).put("status_received", status).encode());
         });
         eventBus.<JsonObject> consumer("DELETE_pet_petId").handler(message -> {
             String petId = message.body().getString("petId");
             String apiKey = message.body().getString("api_key");
-            message.reply(new JsonObject()
-                    .put("petId_received", petId)
-                    .put("header_received", apiKey)
-                    .encode()
-                    );
+            message.reply(new JsonObject().put("petId_received", petId).put("header_received", apiKey).encode());
         });
         eventBus.<JsonObject> consumer("POST_pet_petId_uploadImage").handler(message -> {
             JsonObject result = new JsonObject();
@@ -112,7 +103,7 @@ public class BuildRouterTest {
             String additionalMetadata = message.body().getString("additionalMetadata");
             String fileName = message.body().getString("file");
             vertxFileSystem.readFile(fileName, readFile -> {
-                if(readFile.succeeded()) {
+                if (readFile.succeeded()) {
                     result.put("fileContent_received", readFile.result().toString());
                     result.put("petId_received", petId);
                     result.put("additionalMetadata_received", additionalMetadata);
@@ -130,14 +121,14 @@ public class BuildRouterTest {
             JsonArray status = message.body().getJsonArray("status");
             JsonArray result = new JsonArray();
             for (int i = 0; i < status.size(); i++) {
-                if(cat.getStatus().toString().equals(status.getString(i))){
-                	result.add(new JsonObject(Json.encode(cat)));
+                if (cat.getStatus().toString().equals(status.getString(i))) {
+                    result.add(new JsonObject(Json.encode(cat)));
                 }
-                if(dog.getStatus().toString().equals(status.getString(i))){
-                	result.add(new JsonObject(Json.encode(dog)));
+                if (dog.getStatus().toString().equals(status.getString(i))) {
+                    result.add(new JsonObject(Json.encode(dog)));
                 }
-                if(bird.getStatus().toString().equals(status.getString(i))){
-                	result.add(new JsonObject(Json.encode(bird)));
+                if (bird.getStatus().toString().equals(status.getString(i))) {
+                    result.add(new JsonObject(Json.encode(bird)));
                 }
             }
             message.reply(result.encode());
@@ -163,6 +154,25 @@ public class BuildRouterTest {
         options.setDefaultPort(TEST_PORT);
         httpClient = Vertx.vertx().createHttpClient();
 
+    }
+
+    @AfterClass
+    public static void afterClass(TestContext context) {
+        Async after = context.async();
+        FileSystem vertxFileSystem = vertx.fileSystem();
+        vertxFileSystem.deleteRecursive("file-uploads", true, deletedDir -> {
+            if (deletedDir.succeeded()) {
+                vertxFileSystem.deleteRecursive(".vertx", true, vertxDir -> {
+                    if (vertxDir.succeeded()) {
+                        after.complete();
+                    } else {
+                        context.fail(vertxDir.cause());
+                    }
+                });
+            } else {
+                context.fail(deletedDir.cause());
+            }
+        });
     }
 
     @Test(timeout = 2000)
@@ -228,13 +238,13 @@ public class BuildRouterTest {
         httpClient.getNow(TEST_PORT, TEST_HOST, "/pet/findByStatus?status=available", response -> {
             response.bodyHandler(body -> {
                 JsonArray jsonArray = new JsonArray(body.toString(Charset.forName("utf-8")));
-            	context.assertTrue(jsonArray.size()== 1);
+                context.assertTrue(jsonArray.size() == 1);
                 try {
-					Pet resultCat = Json.mapper.readValue(jsonArray.getJsonObject(0).encode(), Pet.class);
-					context.assertEquals(cat, resultCat);
+                    Pet resultCat = Json.mapper.readValue(jsonArray.getJsonObject(0).encode(), Pet.class);
+                    context.assertEquals(cat, resultCat);
                 } catch (Exception e) {
-					context.fail(e);
-				}
+                    context.fail(e);
+                }
                 async.complete();
             });
         });
@@ -246,16 +256,16 @@ public class BuildRouterTest {
         httpClient.getNow(TEST_PORT, TEST_HOST, "/pet/findByStatus?status=available&status=pending", response -> {
             response.bodyHandler(body -> {
                 JsonArray jsonArray = new JsonArray(body.toString(Charset.forName("utf-8")));
-                context.assertTrue(jsonArray.size()== 2);
+                context.assertTrue(jsonArray.size() == 2);
                 try {
-					Pet resultCat = Json.mapper.readValue(jsonArray.getJsonObject(0).encode(), Pet.class);
-					Pet resultDog = Json.mapper.readValue(jsonArray.getJsonObject(1).encode(), Pet.class);
-					context.assertEquals(cat, resultCat);
-					context.assertEquals(dog, resultDog);
+                    Pet resultCat = Json.mapper.readValue(jsonArray.getJsonObject(0).encode(), Pet.class);
+                    Pet resultDog = Json.mapper.readValue(jsonArray.getJsonObject(1).encode(), Pet.class);
+                    context.assertEquals(cat, resultCat);
+                    context.assertEquals(dog, resultDog);
                 } catch (Exception e) {
-					context.fail(e);
-				}
-                
+                    context.fail(e);
+                }
+
                 async.complete();
             });
         });
@@ -325,16 +335,15 @@ public class BuildRouterTest {
         FileSystem vertxFileSystem = vertx.fileSystem();
         vertxFileSystem.readFile(TEST_FILENAME, readFile -> {
             if (readFile.succeeded()) {
-                buffer.appendString("\r\n");        
+                buffer.appendString("\r\n");
                 buffer.appendString("--MyBoundary\r\n");
-                buffer.appendString("Content-Disposition: form-data; name=\"file\"; filename=\""+TEST_FILENAME+"\"\r\n");
+                buffer.appendString("Content-Disposition: form-data; name=\"file\"; filename=\"" + TEST_FILENAME + "\"\r\n");
                 buffer.appendString("Content-Type: text/plain\r\n");
                 buffer.appendString("\r\n");
                 buffer.appendString(readFile.result().toString(Charset.forName("utf-8")));
                 buffer.appendString("\r\n");
                 buffer.appendString("--MyBoundary--");
 
-                
                 req.end(buffer);
             } else {
                 context.fail(readFile.cause());
@@ -346,7 +355,7 @@ public class BuildRouterTest {
     public void testWithFormParameterUrlEncoded(TestContext context) {
         Async async = context.async();
         HttpClientRequest req = httpClient.post(TEST_PORT, TEST_HOST, "/pet/1");
-        
+
         req.handler(response -> response.bodyHandler(result -> {
             JsonObject jsonBody = new JsonObject(result.toString(Charset.forName("utf-8")));
             context.assertTrue(jsonBody.containsKey("petId_received"));
@@ -361,15 +370,11 @@ public class BuildRouterTest {
         // Construct form
         Escaper esc = UrlEscapers.urlFormParameterEscaper();
 
-        StringBuffer payload = new StringBuffer()
-            .append("name=")
-            .append(esc.escape("MyName"))
-            .append("&status=")
-            .append(esc.escape("MyStatus"));
-        
+        StringBuffer payload = new StringBuffer().append("name=").append(esc.escape("MyName")).append("&status=").append(esc.escape("MyStatus"));
+
         req.putHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
         req.end(payload.toString());
-        
+
     }
 
     @Test(timeout = 2000)
@@ -386,7 +391,7 @@ public class BuildRouterTest {
             async.complete();
         }));
         req.end();
-        
+
     }
-  
+
 }
