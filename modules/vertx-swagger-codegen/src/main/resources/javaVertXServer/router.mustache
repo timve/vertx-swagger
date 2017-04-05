@@ -1,0 +1,240 @@
+package {{package}};
+
+import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpServerResponse;
+import io.vertx.core.json.JsonObject;
+import io.vertx.core.logging.Logger;
+import io.vertx.core.logging.LoggerFactory;
+import io.vertx.ext.web.FileUpload;
+import io.vertx.ext.web.Router;
+import io.vertx.ext.web.RoutingContext;
+
+import java.util.List;
+import java.util.function.Function;
+
+{{#imports}}import {{import}};
+{{/imports}}
+
+public class {{classname}}Router {
+
+    private final static Logger LOGGER = LoggerFactory.getLogger({{classname}}Router.class);
+
+    public static Router router(Vertx vertx) {
+        Router router = Router.router(vertx);
+    {{#operations}}{{#operation}}
+        //Endpoint for {{#vendorExtensions}}{{x-serviceId}}{{/vendorExtensions}}
+        router.{{httpMethod}}("{{{basePathWithoutHost}}}{{{path}}}").handler(delegate(vertx, "{{#vendorExtensions}}{{x-serviceId}}{{/vendorExtensions}}", ctx -> {{^hasParams}}null));{{/hasParams}}{{#hasParams}}{
+            JsonObject object = new JsonObject();
+            {{#allParams}}object.put("{{{paramName}}}", {{#required}}new RequiredCheckingExtractor({{/required}}new {{#isBodyParam}}BodyParameterExtractor{{/isBodyParam}}{{#isFormParam}}{{#notFile}}FormParameterExtractor{{/notFile}}{{^notFile}}FileParameterExtractor{{/notFile}}{{/isFormParam}}{{#isHeaderParam}}HeaderParameterExtractor{{/isHeaderParam}}{{#isPathParam}}PathParameterExtractor{{/isPathParam}}{{#isQueryParam}}QueryParameterExtractor{{/isQueryParam}}(){{#required}}){{/required}}.{{#isListContainer}}all{{/isListContainer}}{{^isListContainer}}single{{/isListContainer}}("{{{paramName}}}", ctx));{{^-last}}
+            {{/-last}}{{/allParams}}
+            return object;
+        }));{{/hasParams}}
+    {{/operation}}{{/operations}}
+        return router;
+    }
+
+    private static Handler<RoutingContext> delegate(Vertx vertx, String serviceId, Function<RoutingContext, Object> contextToMessage) {
+        return context -> {
+            try {
+                Object message = contextToMessage.apply(context);
+                vertx.eventBus().<String> send(serviceId, message, operationResponse -> {
+                    if (!operationResponse.succeeded()) {
+                        internalServerErrorEnd(context.response());
+                        return;
+                    }
+
+                    if (operationResponse.result().body() == null) {
+                        context.response().end();
+                        return;
+                    }
+
+                    LOGGER.debug(operationResponse.result().body());
+                    context.response().end(operationResponse.result().body());
+                });
+            } catch (IllegalArgumentException e) {
+                LOGGER.debug("sending Bad Request", e);
+                badRequestEnd(context.response());
+            }
+        };
+    }
+
+    private static void internalServerErrorEnd(HttpServerResponse response) {
+        response.setStatusCode(500).setStatusMessage("Internal Server Error").end();
+    }
+
+    private static void badRequestEnd(HttpServerResponse response) {
+        response.setStatusCode(400).setStatusMessage("Bad Request").end();
+    }
+
+    private static abstract class ParameterExtractor<T> {
+        abstract boolean isPresent(String name, RoutingContext context);
+        abstract T single(String name, RoutingContext context);
+        abstract List<T> all(String name, RoutingContext context);
+    }
+
+    private static class RequiredCheckingExtractor<T> extends ParameterExtractor<T> {
+        private ParameterExtractor<T> extractor;
+
+        private RequiredCheckingExtractor(ParameterExtractor<T> extractor) {
+            this.extractor = extractor;
+        }
+
+        @Override
+        public T single(String name, RoutingContext context) {
+            if (!extractor.isPresent(name, context)) {
+                throw new IllegalArgumentException("Missing required parameter: " + name);
+            }
+            return extractor.single(name, context);
+        }
+
+        @Override
+        public List<T> all(String name, RoutingContext context) {
+            if (!extractor.isPresent(name, context)) {
+                throw new IllegalArgumentException("Missing required parameter: " + name);
+            }
+            return extractor.all(name, context);
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return extractor.isPresent(name, context);
+        }
+    }
+
+//    private static class SingleValueExtractor<T> extends ParameterExtractor<T> {
+//        private ParameterExtractor<List<T>> extractor;
+//
+//        private SingleValueExtractor(ParameterExtractor<List<T>> extractor) {
+//            this.extractor = extractor;
+//        }
+//
+//        @Override
+//        public T extract(String name, RoutingContext context) {
+//            return extractor.extract(name, context).get(0);
+//        }
+//
+//        @Override
+//        public boolean isPresent(String name, RoutingContext context) {
+//            return extractor.isPresent(name, context);
+//        }
+//    }
+
+    private static class BodyParameterExtractor extends ParameterExtractor<String> {
+        @Override
+        public String single(String name, RoutingContext context) {
+            return context.getBodyAsString();
+        }
+
+        @Override
+        public List<String> all(String name, RoutingContext context) {
+            throw new IllegalStateException("Body parameter is always single");
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return !"".equals(context.getBodyAsString());
+        }
+    }
+
+    private static class FormParameterExtractor extends ParameterExtractor<String> {
+        @Override
+        public List<String> all(String name, RoutingContext context) {
+            MultiMap params = context.request().formAttributes();
+            return params.getAll(name);
+        }
+
+        @Override
+        public String single(String name, RoutingContext context) {
+            MultiMap params = context.request().formAttributes();
+            return params.get(name);
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return context.request().formAttributes().contains(name);
+        }
+    }
+
+    private static class FileParameterExtractor extends ParameterExtractor<String> {
+        @Override
+        public String single(String name, RoutingContext context) {
+            String uploadedFileName = null;
+            for (FileUpload file : context.fileUploads()) {
+                if (file.name().equals(name)) {
+                    uploadedFileName = file.uploadedFileName();
+                    break;
+                }
+            }
+            return uploadedFileName;
+        }
+
+        @Override
+        public List<String> all(String name, RoutingContext context) {
+            throw new IllegalStateException("File parameter is always single");
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return context.fileUploads().stream().anyMatch(file -> file.name().equals(name));
+        }
+    }
+
+    private static class HeaderParameterExtractor extends ParameterExtractor<String> {
+
+        @Override
+        public List<String> all(String name, RoutingContext context) {
+            MultiMap params = context.request().headers();
+            return params.getAll(name);
+        }
+
+        @Override
+        public String single(String name, RoutingContext context) {
+            MultiMap params = context.request().headers();
+            return params.get(name);
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return context.request().headers().contains(name);
+        }
+    }
+
+    private static class PathParameterExtractor extends ParameterExtractor<String> {
+        @Override
+        public String single(String name, RoutingContext context) {
+            MultiMap params = context.request().params();
+            return params.get(name);
+        }
+
+        @Override
+        public List<String> all(String name, RoutingContext context) {
+            throw new IllegalStateException("File parameter is always single");
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return context.request().params().contains(name);
+        }
+    }
+
+    private static class QueryParameterExtractor extends ParameterExtractor<String> {
+        @Override
+        public List<String> all(String name, RoutingContext context) {
+            MultiMap params = context.request().params();
+            return params.getAll(name);
+        }
+
+        @Override
+        public String single(String name, RoutingContext context) {
+            MultiMap params = context.request().params();
+            return params.get(name);
+        }
+
+        @Override
+        public boolean isPresent(String name, RoutingContext context) {
+            return context.request().params().contains(name);
+        }
+    }
+}

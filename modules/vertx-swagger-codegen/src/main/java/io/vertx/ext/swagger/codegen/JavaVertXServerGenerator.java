@@ -62,6 +62,9 @@ public class JavaVertXServerGenerator extends  AbstractJavaCodegen {
                 ".java"); // the extension for each file to write
         apiTemplateFiles.put("apiVerticle.mustache", // the template to use
                 "Verticle.java"); // the extension for each file to write
+        apiTemplateFiles.put("router.mustache", // the template to use
+                "Router.java"); // the extension for each file to write
+
 
         /**
          * Template Location. This is the location which templates will be read
